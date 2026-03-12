@@ -274,6 +274,10 @@ class CellFlow:
         solver_kwargs: dict[str, Any] | None = None,
         layer_norm_before_concatenation: bool = False,
         linear_projection_before_concatenation: bool = False,
+        source_type: Literal["control", "gmm"] = "control",
+        gmm_kwargs: dict[str, Any] | None = None,
+        gmm_optimizer: Any | None = None,
+        geodesic_loss_weight: float = 1.0,
         seed=0,
     ) -> None:
         """Prepare the model for training.
@@ -409,6 +413,33 @@ class CellFlow:
         linear_projection_before_concatenation
             If :obj:`True`, applies a linear projection before concatenating
             the embedded time, embedded data, and embedded condition.
+        source_type
+            Source distribution type. Should be one of:
+
+            - ``'control'``: Use observed control cells as the source (default CellFlow behavior).
+            - ``'gmm'``: Learn a condition-dependent Gaussian mixture model (GMM)
+              as the source distribution, following the SP-FM approach
+              :cite:`rubbi:25`. This can improve OOD generalization to unseen
+              perturbations.
+
+        gmm_kwargs
+            Keyword arguments for :class:`cellflow.networks.GMMBaseDist`.
+            Only used when ``source_type='gmm'``. Common options include:
+
+            - ``'num_modes'`` (:class:`int`): Number of mixture components (default 16).
+            - ``'variance'`` (:class:`float`): Fixed isotropic variance per component (default 0.01).
+            - ``'temperature'`` (:class:`float`): Gumbel-Softmax temperature (default 0.5).
+            - ``'hard_gumbel'`` (:class:`bool`): Use straight-through Gumbel-Softmax (default False).
+            - ``'means_hidden_dims'`` (:class:`tuple`): Hidden dims for means predictor (default (128,)).
+            - ``'logits_hidden_dims'`` (:class:`tuple`): Hidden dims for logits predictor (default (128,)).
+
+        gmm_optimizer
+            Optimizer for the GMM base distribution. Only used when
+            ``source_type='gmm'``. If :obj:`None`, defaults to ``optax.adam(1e-3)``.
+        geodesic_loss_weight
+            Weight of the geodesic length loss (:math:`\\|x_1 - x_0\\|^2`)
+            that regularises the GMM base distribution. Only used when
+            ``source_type='gmm'``.
         seed
             Random seed.
 
@@ -493,6 +524,10 @@ class CellFlow:
                 optimizer=optimizer,
                 conditions=self.train_data.condition_data,
                 rng=jax.random.PRNGKey(seed),
+                source_type=source_type,
+                gmm_kwargs=gmm_kwargs,
+                gmm_optimizer=gmm_optimizer,
+                geodesic_loss_weight=geodesic_loss_weight,
                 **solver_kwargs,
             )
         elif self._solver_class == _genot.GENOT:
@@ -511,6 +546,7 @@ class CellFlow:
             raise NotImplementedError(f"Solver must be an instance of OTFlowMatching or GENOT, got {type(self.solver)}")
 
         self._trainer = CellFlowTrainer(solver=self.solver, predict_kwargs=self.validation_data["predict_kwargs"])  # type: ignore[arg-type]
+        self._source_type = source_type
 
     def train(
         self,
@@ -668,6 +704,81 @@ class CellFlow:
             predictions=out_np,
             key_added_prefix=key_added_prefix,
         )
+
+    def predict_from_gmm(
+        self,
+        covariate_data: pd.DataFrame,
+        n_samples: int = 1000,
+        condition_id_key: str | None = None,
+        rep_dict: dict[str, str] | None = None,
+        rng: ArrayLike | None = None,
+        **kwargs: Any,
+    ) -> dict[str, ArrayLike]:
+        """Predict perturbation responses by sampling from the learned GMM base.
+
+        This is the SP-FM prediction mode: instead of transporting observed
+        control cells, we draw ``n_samples`` from the condition-dependent GMM
+        base distribution and evolve them to t = 1 via the learned velocity field.
+
+        Parameters
+        ----------
+        covariate_data
+            A :class:`~pandas.DataFrame` with the same covariate columns as
+            used during data preparation in :meth:`prepare_data`.
+        n_samples
+            Number of cells to generate per condition.
+        condition_id_key
+            Optional key in ``covariate_data`` to use as condition identifier
+            in the returned dictionary.
+        rep_dict
+            Dictionary containing the representations of the perturbation
+            covariates. If :obj:`None`, defaults to ``adata.uns``.
+        rng
+            JAX PRNG key. If :obj:`None`, a default key is used.
+        kwargs
+            Additional keyword arguments forwarded to :func:`diffrax.diffeqsolve`.
+
+        Returns
+        -------
+        A :class:`dict` mapping condition identifiers to predicted arrays of
+        shape ``(n_samples, data_dim)``.
+        """
+        if self.solver is None or not self.solver.is_trained:
+            raise ValueError("Model not trained. Please call `train` first.")
+        if not hasattr(self, '_source_type') or self._source_type != "gmm":
+            raise ValueError(
+                "predict_from_gmm requires source_type='gmm'. "
+                "Set source_type='gmm' in prepare_model()."
+            )
+
+        if rep_dict is None:
+            rep_dict = self._adata.uns
+
+        cond_data = self._dm.get_condition_data(
+            covariate_data=covariate_data,
+            rep_dict=rep_dict,
+            condition_id_key=condition_id_key,
+        )
+
+        rng = jax.random.PRNGKey(0) if rng is None else rng
+        results = {}
+        n_conditions = len(next(iter(cond_data.condition_data.values())))
+        for i in range(n_conditions):
+            condition = {k: v[[i], :] for k, v in cond_data.condition_data.items()}
+            if condition_id_key:
+                c_key = cond_data.perturbation_idx_to_id[i]
+            else:
+                cov_combination = cond_data.perturbation_idx_to_covariates[i]
+                c_key = tuple(cov_combination[j] for j in range(len(cov_combination)))
+
+            rng, rng_sample, rng_pred = jax.random.split(rng, 3)
+            # Sample from GMM
+            x0 = self.solver.sample_from_gmm(condition, n_samples, rng=rng_sample)
+            # Transport via ODE
+            x1 = self.solver._predict_jit(x0, condition, rng=rng_pred, **kwargs)
+            results[c_key] = np.array(x1)
+
+        return results
 
     def get_condition_embedding(
         self,
@@ -870,3 +981,8 @@ class CellFlow:
     def condition_mode(self) -> Literal["deterministic", "stochastic"]:
         """The mode of the encoder."""
         return self.velocity_field.condition_mode
+
+    @property
+    def source_type(self) -> str:
+        """The source distribution type ('control' or 'gmm')."""
+        return getattr(self, '_source_type', 'control')

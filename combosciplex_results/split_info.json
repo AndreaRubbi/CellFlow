@@ -1,0 +1,18 @@
+{
+  "n_train_conds": 25,
+  "n_test_conds": 7,
+  "test_conditions": [
+    "Panobinostat+Crizotinib",
+    "Panobinostat+Curcumin",
+    "Panobinostat+SRT1720",
+    "Panobinostat+Sorafenib",
+    "SRT2104+Alvespimycin",
+    "control+Alvespimycin",
+    "control+Dacinostat"
+  ],
+  "n_deg_genes": 49,
+  "n_top_degs_per_condition": 20,
+  "num_iters": 30000,
+  "seed": 42,
+  "fingerprint_dim": 1024
+}

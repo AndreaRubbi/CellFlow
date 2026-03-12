@@ -1,0 +1,37 @@
+{
+  "os": "macOS-26.3-arm64-arm-64bit",
+  "python": "CPython 3.12.13",
+  "startedAt": "2026-03-11T14:34:06.167013Z",
+  "program": "/Users/ar36/Desktop/CellFlow/run_vanilla_vs_gmm.py",
+  "codePath": "run_vanilla_vs_gmm.py",
+  "codePathLocal": "run_vanilla_vs_gmm.py",
+  "git": {
+    "remote": "https://github.com/AndreaRubbi/CellFlow.git",
+    "commit": "acd677d83d57644e8f3c295adf0ff46f53d6d88e"
+  },
+  "email": "ar36@sanger.ac.uk",
+  "root": "comparison_results",
+  "host": "mib120160s",
+  "executable": "/Users/ar36/miniforge3/envs/cellflow/bin/python",
+  "cpu_count": 11,
+  "cpu_count_logical": 11,
+  "disk": {
+    "/": {
+      "total": "494384795648",
+      "used": "472074252288"
+    }
+  },
+  "memory": {
+    "total": "19327352832"
+  },
+  "apple": {
+    "name": "Apple M3 Pro",
+    "ecpuCores": 6,
+    "pcpuCores": 5,
+    "gpuCores": 14,
+    "memoryGb": 18,
+    "swapTotalBytes": "18253611008",
+    "ramTotalBytes": "19327352832"
+  },
+  "writerId": "i5iyr7mevvxx2olfk75b31t60jd2gwin"
+}

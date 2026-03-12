@@ -1,0 +1,112 @@
+_wandb:
+    value:
+        cli_version: 0.25.0
+        e:
+            6uxzr3197pfgjwcy91qqiudm0woyo3i9:
+                apple:
+                    ecpuCores: 6
+                    gpuCores: 14
+                    memoryGb: 18
+                    name: Apple M3 Pro
+                    pcpuCores: 5
+                    ramTotalBytes: "19327352832"
+                    swapTotalBytes: "16106127360"
+                codePath: run_combosciplex_vanilla_vs_gmm.py
+                codePathLocal: run_combosciplex_vanilla_vs_gmm.py
+                cpu_count: 11
+                cpu_count_logical: 11
+                disk:
+                    /:
+                        total: "494384795648"
+                        used: "453663449088"
+                email: ar36@sanger.ac.uk
+                executable: /Users/ar36/miniforge3/envs/cellflow/bin/python
+                git:
+                    commit: acd677d83d57644e8f3c295adf0ff46f53d6d88e
+                    remote: https://github.com/AndreaRubbi/CellFlow.git
+                host: mib120160s
+                memory:
+                    total: "19327352832"
+                os: macOS-26.3-arm64-arm-64bit
+                program: /Users/ar36/Desktop/CellFlow/run_combosciplex_vanilla_vs_gmm.py
+                python: CPython 3.12.13
+                root: combosciplex_results
+                startedAt: "2026-03-09T09:50:35.899685Z"
+                writerId: 6uxzr3197pfgjwcy91qqiudm0woyo3i9
+        m: []
+        python_version: 3.12.13
+        t:
+            "1":
+                - 1
+                - 5
+                - 11
+                - 12
+                - 45
+                - 49
+                - 53
+                - 54
+            "2":
+                - 1
+                - 5
+                - 11
+                - 12
+                - 45
+                - 49
+                - 53
+                - 54
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+            "4": 3.12.13
+            "5": 0.25.0
+            "6": 5.3.0
+            "12": 0.25.0
+            "13": darwin-arm64
+batch_size:
+    value: 256
+condition_embedding_dim:
+    value: 256
+conditioning:
+    value: film
+data_dim:
+    value: 50
+fingerprint_dim:
+    value: 1024
+gmm_cooldown:
+    value: 2000
+gmm_warmup:
+    value: 3000
+hidden_dims:
+    value: 512x512x512
+logits_hidden_dims:
+    value:
+        - 256
+        - 128
+lr:
+    value: 0.0005
+means_hidden_dims:
+    value:
+        - 512
+        - 256
+model_name:
+    value: GMM CellFlow (Learned GMM source)
+n_test_conds:
+    value: 7
+n_train_conds:
+    value: 25
+num_iters:
+    value: 20000
+num_modes:
+    value: 32
+probability_path_noise:
+    value: 1.5
+seed:
+    value: 42
+source_type:
+    value: gmm
+temperature:
+    value: 0.2
+variance:
+    value: 0.03

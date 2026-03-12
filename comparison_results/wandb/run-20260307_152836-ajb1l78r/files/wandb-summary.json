@@ -1,0 +1,1 @@
+{"train/gmm_fm_loss":0.343571275472641,"train/gmm_loss":47.13755416870117,"train/gmm_grad_norm":3.4449961185455322,"_runtime":124,"_timestamp":1.7728938407692301e+09,"train/loss":0.312717080116272,"train/vf_grad_norm":1.4382168054580688,"train/gmm_geodesic_loss":46.793983459472656,"train/iteration":4999,"_wandb":{"runtime":124},"_step":4999}

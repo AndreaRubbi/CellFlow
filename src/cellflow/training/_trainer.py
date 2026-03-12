@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from cellflow.data._dataloader import OOCTrainSampler, TrainSampler, ValidationSampler
 from cellflow.solvers import _genot, _otfm
-from cellflow.training._callbacks import BaseCallback, CallbackRunner
+from cellflow.training._callbacks import BaseCallback, CallbackRunner, LoggingCallback
 
 
 class CellFlowTrainer:
@@ -120,15 +120,46 @@ class CellFlowTrainer:
         )
         crun.on_train_begin()
 
+        # Detect WandbLogger for per-iteration logging
+        _wandb_loggers = [c for c in callbacks if isinstance(c, LoggingCallback) and hasattr(c, "wandb")]
+
         pbar = tqdm(range(num_iterations))
         sampler = dataloader
         if isinstance(dataloader, OOCTrainSampler):
             dataloader.set_sampler(num_iterations=num_iterations)
+
+        # GMM warmup/cooldown schedule
+        _gmm_warmup = getattr(self.solver, "gmm_warmup_iters", 0)
+        _gmm_cooldown = getattr(self.solver, "gmm_cooldown_iters", 0)
+        _has_gmm_schedule = (
+            getattr(self.solver, "source_type", None) == "gmm"
+            and (_gmm_warmup > 0 or _gmm_cooldown > 0)
+        )
+
         for it in pbar:
+            # Toggle GMM training based on warmup/cooldown schedule
+            if _has_gmm_schedule:
+                cooldown_start = num_iterations - _gmm_cooldown
+                if it < _gmm_warmup:
+                    self.solver.gmm_training_active = False
+                elif it >= cooldown_start:
+                    self.solver.gmm_training_active = False
+                else:
+                    self.solver.gmm_training_active = True
+
             rng_jax, rng_step_fn = jax.random.split(rng_jax, 2)
             batch = sampler.sample(rng_np)
             loss = self.solver.step_fn(rng_step_fn, batch)
             self.training_logs["loss"].append(float(loss))
+
+            # Log per-step diagnostics (loss, grad norms) to W&B
+            if _wandb_loggers and hasattr(self.solver, "_step_diagnostics"):
+                diag = {f"train/{k}": v for k, v in self.solver._step_diagnostics.items()}
+                diag["train/iteration"] = it
+                if _has_gmm_schedule:
+                    diag["train/gmm_active"] = int(self.solver.gmm_training_active)
+                for wl in _wandb_loggers:
+                    wl.wandb.log(diag, step=it)
 
             if ((it - 1) % valid_freq == 0) and (it > 1):
                 # Get predictions from validation data
