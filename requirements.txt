@@ -1,0 +1,41 @@
+# CellFlow - experiment requirements
+# Install CellFlow itself first:
+#   pip install -e ".[pp,embedding,external]"
+# Then install remaining experiment-time dependencies:
+#   pip install -r requirements.txt
+
+# ─── JAX ecosystem ────────────────────────────────────────────────────────────
+jax==0.9.1
+jaxlib==0.9.1
+flax==0.12.5
+optax==0.2.6
+diffrax==0.7.2
+orbax-checkpoint==0.11.33
+
+# ─── Optimal Transport ─────────────────────────────────────────────────────────
+ott-jax[neural]>=0.5
+
+# ─── Single-cell / biology ─────────────────────────────────────────────────────
+anndata==0.12.10
+scanpy==1.12
+pertpy==1.0.5
+
+# ─── ML / numerics ─────────────────────────────────────────────────────────────
+numpy==2.4.3
+scipy<1.16
+scikit-learn==1.5.1
+pandas==2.3.3
+torch==2.10.0
+
+# ─── Cheminformatics ───────────────────────────────────────────────────────────
+rdkit==2025.9.6
+
+# ─── Evaluation ────────────────────────────────────────────────────────────────
+gge-eval==1.0.1
+
+# ─── Visualisation ─────────────────────────────────────────────────────────────
+matplotlib==3.10.8
+umap-learn==0.5.7
+
+# ─── Experiment tracking ───────────────────────────────────────────────────────
+wandb==0.25.0
